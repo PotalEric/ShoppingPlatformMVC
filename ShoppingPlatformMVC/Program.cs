@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using ShoppingPlatformMVC.Models;
 namespace ShoppingPlatformMVC
 {
     public class Program
@@ -5,12 +7,18 @@ namespace ShoppingPlatformMVC
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string not found.");
+
+            builder.Services.AddDbContext<ShoppingPlatformMVCContext>(options => options.UseSqlServer(connectionString));
 
             // Add services to the container.
             builder.Services.AddControllersWithViews();
 
-            var app = builder.Build();
+            builder.Services.AddRazorPages();
 
+
+            var app = builder.Build();
+           
             // Configure the HTTP request pipeline.
             if (!app.Environment.IsDevelopment())
             {
@@ -29,6 +37,8 @@ namespace ShoppingPlatformMVC
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}")
                 .WithStaticAssets();
+
+            app.MapRazorPages();
 
             app.Run();
         }

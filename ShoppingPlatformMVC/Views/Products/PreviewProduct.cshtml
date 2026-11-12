@@ -1,0 +1,24 @@
+﻿@model OrderPreview
+
+@{
+    ViewData["Title"] = "Product preview";
+}
+
+<h1 class="mb-4">@Model.Product.Name</h1>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h2 class="h5 card-title">@Model.Product.Name</h2>
+        <img  src="@Model.Product.ProductPhoto.Data" class="" />
+
+        <dl class="row mb-0">
+            <dt class="col-sm-4">Price per item</dt>
+            <dd class="col-sm-8">@Model.Product.Price.ToString("C")</dd>
+            <dt class="col-sm-4">Quantity</dt>
+            <dd class="col-sm-8">@Model.Quantity</dd>
+            <dt class="col-sm-4">Subtotal</dt>
+            <dd class="col-sm-8 fw-bold">@Model.Total.ToString("C")</dd>
+        </dl>
+    </div>
+</div>
+<a asp-action="Index" class="btn btn-outline-primary mt-3">Back to items</a>
