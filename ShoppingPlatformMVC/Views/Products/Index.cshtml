@@ -17,27 +17,27 @@ else
             <div class="col">
                 <div class="card h-100 shadow-sm">
                     <div class="ratio ratio-4x3">
-                        <img src="@Url.Action("Photo", "Items", new { id = product.Id })" class="card-img-top object-fit-contain" alt="Photo of @product.Name" />
-                        </div>
-                       
+                        <img src="@Url.Action("Photo", "Products", new { id = product.Id })" class="card-img-top object-fit-contain" alt="Photo of @product.Name" />
+                    </div>
                     <div class="card-body d-flex flex-column">
-                        <h2 class="card-title">@product.Name</h2>
-                        <p class="fs-4 fw-semibold mb-2">@product.Price.ToString("C")</p>
-                        <p class="text-muted">Example stock: @OrderPreview.ExampleStock available</p>
                         <form asp-controller="Products" asp-action="PreviewProduct" method="post" class="mt-auto">
+                            <h2 class="card-title">@product.Name</h2>
+                            <p class="fs-4 fw-semibold mb-2">@product.Price.ToString("C")</p>
+                            <p class="text-muted">Example stock: @product.Stock available</p>
                             <input type="hidden" name="Id" value="@product.Id" />
                             <label for="quantity-@product.Id" class="form-label">Quantity to order</label>
                             <input id="quantity-@product.Id" name="quantity" type="number" class="form-control mb-3"
-                                   min="1" max="@OrderPreview.ExampleStock" value="1" required />
+                                   min="1" max="@OrderPreviewViewModel.ExampleStock" value="1" required />
                             <button class="btn btn-primary w-100" type="submit">Preview order</button>
                             @* <a href="https://getbootstrap.com" class="stretched-link">Go somewhere</a> *@
                         </form>
+                        <a asp-controller="Products" asp-action="Edit" asp-route-id="@product.Id" class="btn btn-outline-secondary w-100 mt-2">Edit product</a>
                     </div>
+                </div>
             </div>
-        </div>
      
-    }
-</div>
+        }
+    </div>
 
 
 }

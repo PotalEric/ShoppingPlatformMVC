@@ -1,4 +1,4 @@
-namespace ShoppingPlatformMVC.Models
+namespace ShoppingPlatformMVC.Viewmodel
 {
     public class ErrorViewModel
     {

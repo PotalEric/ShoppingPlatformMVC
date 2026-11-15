@@ -1,4 +1,4 @@
-﻿@model OrderPreview
+﻿@model OrderPreviewViewModel
 
 @{
     ViewData["Title"] = "Product preview";
@@ -9,7 +9,7 @@
 <div class="card shadow-sm">
     <div class="card-body">
         <h2 class="h5 card-title">@Model.Product.Name</h2>
-        <img  src="@Model.Product.ProductPhoto.Data" class="" />
+        <img src="@Url.Action("Photo", "Products", new { id = Model.Product.Id })" class="card-img-top object-fit-contain" alt="Photo of @Model.Product.Name" />
 
         <dl class="row mb-0">
             <dt class="col-sm-4">Price per item</dt>

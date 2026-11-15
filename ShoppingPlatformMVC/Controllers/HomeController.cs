@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using ShoppingPlatformMVC.Models;
+using ShoppingPlatformMVC.Viewmodel;
 using System.Diagnostics;
 
 namespace ShoppingPlatformMVC.Controllers

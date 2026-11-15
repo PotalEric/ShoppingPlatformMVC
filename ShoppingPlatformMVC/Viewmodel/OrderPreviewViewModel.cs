@@ -1,6 +1,8 @@
-﻿namespace ShoppingPlatformMVC.Models
+using ShoppingPlatformMVC.Models;
+
+namespace ShoppingPlatformMVC.Viewmodel
 {
-    public class OrderPreview
+    public class OrderPreviewViewModel
     {
         public const int ExampleStock = 10;
 

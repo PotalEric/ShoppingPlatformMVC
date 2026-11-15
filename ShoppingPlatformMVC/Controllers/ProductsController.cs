@@ -2,9 +2,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ShoppingPlatformMVC.Models;
+using ShoppingPlatformMVC.Viewmodel;
 
 public class ProductsController : Controller
 {
+    private const int MaxPhotoBytes = 5 * 1024 * 1024; //5MB
     private readonly ShoppingPlatformMVCContext _db;
 
     public ProductsController(ShoppingPlatformMVCContext db)
@@ -13,7 +15,7 @@ public class ProductsController : Controller
     }
 
     // GET: PRODUCTS
-    public async Task<IActionResult> Index()    
+    public async Task<IActionResult> Index()
     {
         return View(await _db.Product.ToListAsync());
     }
@@ -71,42 +73,102 @@ public class ProductsController : Controller
         {
             return NotFound();
         }
-        return View(product);
+        return View(new EditProductViewModel
+        {
+            Id = product.Id,
+            Name = product.Name,
+            Price = product.Price,
+            Stock = product.Stock
+        });
     }
 
-    // POST: PRODUCTS/Edit/5
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+    // POST: PRODUCTS/Edit
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int? id, [Bind("Id,Name,Price")] Product product)
+    [RequestSizeLimit(6 * 1024 * 1024)]
+    public async Task<IActionResult> Edit(int? id, EditProductViewModel model)
     {
-        if (id != product.Id)
+        if (id != model.Id)
         {
             return NotFound();
         }
 
-        if (ModelState.IsValid)
+        var product = await _db.Product.FindAsync(model.Id);
+        if (product is null)
         {
-            try
-            {
-                _db.Update(product);
-                await _db.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ProductExists(product.Id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-            return RedirectToAction(nameof(Index));
+            return NotFound();
         }
-        return View(product);
+
+        byte[]? photoData = null;
+        string? contentType = null;
+        if (model.Photo is not null)
+        {
+            if (model.Photo.Length == 0 || model.Photo.Length > MaxPhotoBytes)
+            {
+                ModelState.AddModelError(nameof(model.Photo), "Choose a JPEG or PNG photo no larger than 5 MB.");
+            }
+            else
+            {
+                using var stream = new MemoryStream();
+                await model.Photo.CopyToAsync(stream);
+                photoData = stream.ToArray();
+                contentType = PhotoFile.GetContentType(photoData);
+                if (contentType is null)
+                {
+                    ModelState.AddModelError(nameof(model.Photo), "The file must be a JPEG or PNG photo.");
+                }
+            }
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        product.Name = model.Name;
+        product.Price = model.Price;
+        product.Stock = model.Stock;
+
+        if (photoData is not null && contentType is not null)
+        {
+            var productPhoto = await _db.ProductPhotos.FindAsync(model.Id);
+            if (productPhoto is null)
+            {
+                productPhoto = new ProductPhoto { ProductId = model.Id };
+                _db.ProductPhotos.Add(productPhoto);
+            }
+
+            productPhoto.Data = photoData;
+            productPhoto.ContentType = contentType;
+        }
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!ProductExists(model.Id))
+            {
+                return NotFound();
+            }
+            throw;
+        }
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> Photo(int id)
+    {
+        var photo = await _db.ProductPhotos.AsNoTracking().FirstOrDefaultAsync(item => item.ProductId == id);
+        if (photo is null)
+        {
+            return NotFound();
+        }
+
+        Response.Headers.XContentTypeOptions = "nosniff";
+        return File(photo.Data, photo.ContentType);
     }
 
     // GET: PRODUCTS/Delete/5
@@ -150,9 +212,9 @@ public class ProductsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> PreviewProduct(int Id, int quantity)
     {
-        if (!ModelState.IsValid || quantity < 1 || quantity > OrderPreview.ExampleStock)
+        if (!ModelState.IsValid || quantity < 1 || quantity > OrderPreviewViewModel.ExampleStock)
         {
-            TempData["OrderError"] = $"Choose a whole number between 1 and {OrderPreview.ExampleStock}.";
+            TempData["OrderError"] = $"Choose a whole number between 1 and {OrderPreviewViewModel.ExampleStock}.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -162,6 +224,56 @@ public class ProductsController : Controller
             return NotFound();
         }
 
-        return View(new OrderPreview { Product = Product, Quantity = quantity });
+        return View(new OrderPreviewViewModel { Product = Product, Quantity = quantity });
     }
+
+    public async Task<IActionResult> Upload(int productId, IFormFile photo)
+    {
+
+
+        if (!ModelState.IsValid)
+        {
+            TempData["PhotoError"] = "Invalid input. Please try again.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (!ModelState.IsValid || photo is null || photo.Length > MaxPhotoBytes)
+        {
+            TempData["PhotoEror"] = "Invalid photo.Please upload again";
+            return RedirectToAction(nameof(Index));
+        }
+        if (!await _db.Product.AnyAsync(product => product.Id == productId))
+        {
+            TempData["PhotoError"] = "The selected product was not found.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        using var stream = new MemoryStream();
+        await photo.CopyToAsync(stream);
+        var data = stream.ToArray();
+        string? contentType = PhotoFile.GetContentType(data);
+
+        if (contentType is null)
+        {
+            TempData["PhotoError"] = "The file must be a JPEG or PNG photo.";
+            return RedirectToAction(nameof(Index));
+        }
+        var productPhoto = await _db.ProductPhotos.FindAsync(productId);
+
+        if (productPhoto is null)
+        {
+            productPhoto = new ProductPhoto { ProductId = productId };
+            _db.ProductPhotos.Add(productPhoto);
+        }
+
+        productPhoto.Data = data;
+        productPhoto.ContentType = contentType;
+        await _db.SaveChangesAsync();
+
+        TempData["PhotoSuccess"] = "The photo was saved to the database.";
+        return RedirectToAction(nameof(Index));
+    }
+
+
+
 }
