@@ -1,12 +1,13 @@
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using ShoppingPlatformMVC;
+using ShoppingPlatformMVC.Data;
 using ShoppingPlatformMVC.Models;
 using ShoppingPlatformMVC.Viewmodel;
 
 public class ProductsController : Controller
 {
-    private const int MaxPhotoBytes = 5 * 1024 * 1024; //5MB
     private readonly ShoppingPlatformMVCContext _db;
 
     public ProductsController(ShoppingPlatformMVCContext db)
@@ -17,7 +18,7 @@ public class ProductsController : Controller
     // GET: PRODUCTS
     public async Task<IActionResult> Index()
     {
-        return View(await _db.Product.ToListAsync());
+        return View(await _db.Products.ToListAsync());
     }
 
     // GET: PRODUCTS/Details/5
@@ -28,7 +29,7 @@ public class ProductsController : Controller
             return NotFound();
         }
 
-        var product = await _db.Product
+        var product = await _db.Products
             .FirstOrDefaultAsync(m => m.Id == id);
         if (product == null)
         {
@@ -68,7 +69,7 @@ public class ProductsController : Controller
             return NotFound();
         }
 
-        var product = await _db.Product.FindAsync(id);
+        var product = await _db.Products.FindAsync(id);
         if (product == null)
         {
             return NotFound();
@@ -93,7 +94,7 @@ public class ProductsController : Controller
             return NotFound();
         }
 
-        var product = await _db.Product.FindAsync(model.Id);
+        var product = await _db.Products.FindAsync(model.Id);
         if (product is null)
         {
             return NotFound();
@@ -103,20 +104,15 @@ public class ProductsController : Controller
         string? contentType = null;
         if (model.Photo is not null)
         {
-            if (model.Photo.Length == 0 || model.Photo.Length > MaxPhotoBytes)
+            var (data, type, error) = await PhotoFile.ReadAsync(model.Photo);
+            if (error is not null || data is null || type is null)
             {
-                ModelState.AddModelError(nameof(model.Photo), "Choose a JPEG or PNG photo no larger than 5 MB.");
+                ModelState.AddModelError(nameof(model.Photo), error ?? "The photo could not be read.");
             }
             else
             {
-                using var stream = new MemoryStream();
-                await model.Photo.CopyToAsync(stream);
-                photoData = stream.ToArray();
-                contentType = PhotoFile.GetContentType(photoData);
-                if (contentType is null)
-                {
-                    ModelState.AddModelError(nameof(model.Photo), "The file must be a JPEG or PNG photo.");
-                }
+                photoData = data;
+                contentType = type;
             }
         }
 
@@ -179,7 +175,7 @@ public class ProductsController : Controller
             return NotFound();
         }
 
-        var product = await _db.Product
+        var product = await _db.Products
             .FirstOrDefaultAsync(m => m.Id == id);
         if (product == null)
         {
@@ -194,10 +190,10 @@ public class ProductsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int? id)
     {
-        var product = await _db.Product.FindAsync(id);
+        var product = await _db.Products.FindAsync(id);
         if (product != null)
         {
-            _db.Product.Remove(product);
+            _db.Products.Remove(product);
         }
 
         await _db.SaveChangesAsync();
@@ -206,22 +202,28 @@ public class ProductsController : Controller
 
     private bool ProductExists(int? id)
     {
-        return _db.Product.Any(e => e.Id == id);
+        return _db.Products.Any(e => e.Id == id);
     }
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> PreviewProduct(int Id, int quantity)
     {
-        if (!ModelState.IsValid || quantity < 1 || quantity > OrderPreviewViewModel.ExampleStock)
+        if (!ModelState.IsValid || quantity < 1 || quantity > CheckoutViewModel.MaxQuantity)
         {
-            TempData["OrderError"] = $"Choose a whole number between 1 and {OrderPreviewViewModel.ExampleStock}.";
+            TempData["OrderError"] = $"Choose a whole number between 1 and {CheckoutViewModel.MaxQuantity}.";
             return RedirectToAction(nameof(Index));
         }
 
-        var Product = await _db.Product.FindAsync(Id);
+        var Product = await _db.Products.FindAsync(Id);
         if (Product is null)
         {
             return NotFound();
+        }
+
+        if (Product.Stock < quantity)
+        {
+            TempData["OrderError"] = "The requested quantity is not available.";
+            return RedirectToAction(nameof(Index));
         }
 
         return View(new OrderPreviewViewModel { Product = Product, Quantity = quantity });
@@ -237,12 +239,12 @@ public class ProductsController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        if (!ModelState.IsValid || photo is null || photo.Length > MaxPhotoBytes)
+        if (!ModelState.IsValid || photo is null || photo.Length > PhotoFile.MaxBytes)
         {
             TempData["PhotoEror"] = "Invalid photo.Please upload again";
             return RedirectToAction(nameof(Index));
         }
-        if (!await _db.Product.AnyAsync(product => product.Id == productId))
+        if (!await _db.Products.AnyAsync(product => product.Id == productId))
         {
             TempData["PhotoError"] = "The selected product was not found.";
             return RedirectToAction(nameof(Index));

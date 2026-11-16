@@ -1,15 +1,15 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+using System;
+using System.Collections.Generic;
 
-namespace ShoppingPlatformMVC.Models
+namespace ShoppingPlatformMVC;
+
+public partial class ProductPhoto
 {
-    public class ProductPhoto
-    {
-        [Key]
-        [ForeignKey(nameof(Product))]
-        public int ProductId { get; set; }
-        public Product Product { get; set; }
-        public byte[] Data { get; set; } 
-        public string ContentType { get; set; } 
-    }
+    public int ProductId { get; set; }
+
+    public byte[] Data { get; set; } = null!;
+
+    public string ContentType { get; set; } = null!;
+
+    public virtual Product Product { get; set; } = null!;
 }

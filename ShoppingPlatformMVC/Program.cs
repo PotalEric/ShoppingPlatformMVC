@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ShoppingPlatformMVC.Models;
+using ShoppingPlatformMVC.Data;
 namespace ShoppingPlatformMVC
 {
     public class Program
@@ -13,6 +14,8 @@ namespace ShoppingPlatformMVC
 
             // Add services to the container.
             builder.Services.AddControllersWithViews();
+            builder.Services.AddDistributedMemoryCache();
+            builder.Services.AddSession(options => options.IdleTimeout = TimeSpan.FromHours(2));
 
             builder.Services.AddRazorPages();
 
@@ -30,6 +33,7 @@ namespace ShoppingPlatformMVC
             app.UseHttpsRedirection();
             app.UseRouting();
 
+            app.UseSession();
             app.UseAuthorization();
 
             app.MapStaticAssets();

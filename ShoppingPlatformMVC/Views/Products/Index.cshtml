@@ -1,7 +1,12 @@
-@model IEnumerable<ShoppingPlatformMVC.Models.Product>
+@model IEnumerable<Product>
 
 @{
     ViewData["Title"] = "Index";
+}
+
+@if (TempData["OrderError"] is string error)
+{
+    <div class="alert alert-danger" role="alert">@error</div>
 }
 
 @if (!Model.Any())
@@ -23,12 +28,19 @@ else
                         <form asp-controller="Products" asp-action="PreviewProduct" method="post" class="mt-auto">
                             <h2 class="card-title">@product.Name</h2>
                             <p class="fs-4 fw-semibold mb-2">@product.Price.ToString("C")</p>
-                            <p class="text-muted">Example stock: @product.Stock available</p>
+                            <p class="text-muted">Stock: @product.Stock available</p>
+                            @if (product.Stock > 0)
+                            {
                             <input type="hidden" name="Id" value="@product.Id" />
                             <label for="quantity-@product.Id" class="form-label">Quantity to order</label>
                             <input id="quantity-@product.Id" name="quantity" type="number" class="form-control mb-3"
-                                   min="1" max="@OrderPreviewViewModel.ExampleStock" value="1" required />
+                                   min="1" max="@Math.Min(product.Stock, CheckoutViewModel.MaxQuantity)" value="1" required />
                             <button class="btn btn-primary w-100" type="submit">Preview order</button>
+                            }
+                            else
+                            {
+                                <p class="text-muted">Out of stock</p>
+                            }
                             @* <a href="https://getbootstrap.com" class="stretched-link">Go somewhere</a> *@
                         </form>
                         <a asp-controller="Products" asp-action="Edit" asp-route-id="@product.Id" class="btn btn-outline-secondary w-100 mt-2">Edit product</a>
