@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
+using ShoppingPlatformMVC.Models;
 
 namespace ShoppingPlatformMVC.Data;
 
@@ -23,6 +24,10 @@ public partial class ShoppingPlatformMVCContext : DbContext
 
     public virtual DbSet<ProductPhoto> ProductPhotos { get; set; }
 
+    public virtual DbSet<Order> Orders { get; set; }
+
+    public virtual DbSet<OrderItem> OrderItems { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseSqlServer("Name=ConnectionStrings:DefaultConnection");
 
@@ -33,6 +38,20 @@ public partial class ShoppingPlatformMVCContext : DbContext
             entity.HasKey(e => e.Id).HasName("PK_DemoCarts");
 
             entity.Property(e => e.Id).ValueGeneratedNever();
+        });
+
+        modelBuilder.Entity<Order>(entity =>
+        {
+            entity.Property(order => order.Total).HasPrecision(28, 2);
+            entity.Property(order => order.Status).HasMaxLength(40).IsRequired();
+        });
+
+        modelBuilder.Entity<OrderItem>(entity =>
+        {
+            entity.Property(item => item.UnitPrice).HasPrecision(18, 2);
+            entity.Property(item => item.ProductName).IsRequired();
+            entity.HasOne(item => item.Order).WithMany(order => order.Items)
+                .HasForeignKey(item => item.OrderId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<CartItem>(entity =>

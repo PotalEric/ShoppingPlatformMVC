@@ -158,9 +158,11 @@ namespace ShoppingPlatformMVC.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            var order = new Order { CartId = id, CreatedAtUtc = DateTime.UtcNow };
             foreach (var line in lines)
             {
-                if (!quotedQuantities.TryGetValue(line.ProductId, out var quotedQuantity) || quotedQuantity != line.Quantity ||
+                if (line.Quantity < 1 || line.Quantity > CheckoutViewModel.MaxQuantity ||
+                    !quotedQuantities.TryGetValue(line.ProductId, out var quotedQuantity) || quotedQuantity != line.Quantity ||
                     !quotedPrices.TryGetValue(line.ProductId, out var priceText) ||
                     !decimal.TryParse(priceText, NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var quotedPrice))
                 {
@@ -176,12 +178,23 @@ namespace ShoppingPlatformMVC.Controllers
                     TempData["CartError"] = "A product is unavailable, has insufficient stock, or its price changed. Nothing was checked out; please review your cart.";
                     return RedirectToAction(nameof(Index));
                 }
+
+                var product = await db.Products.AsNoTracking().SingleAsync(item => item.Id == line.ProductId);
+                order.Items.Add(new OrderItem
+                {
+                    ProductId = product.Id,
+                    ProductName = product.Name,
+                    Quantity = line.Quantity,
+                    UnitPrice = product.Price
+                });
+                order.Total += product.Price * line.Quantity;
             }
 
+            db.Orders.Add(order);
             db.CartItems.RemoveRange(lines);
             await db.SaveChangesAsync();
             await transaction.CommitAsync();
-            TempData["CartSuccess"] = "Example checkout completed and database stock reduced. No payment or order was created.";
+            TempData["CartSuccess"] = $"Example order #{order.Id} was saved and stock reduced. No payment was collected.";
             return RedirectToAction(nameof(Index));
         }
     }
