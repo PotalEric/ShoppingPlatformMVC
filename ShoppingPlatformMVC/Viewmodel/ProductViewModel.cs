@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ShoppingPlatformMVC.Viewmodel
 {
-    public class EditProductViewModel
+    public class ProductViewModel
     {
         public int Id { get; set; }
 

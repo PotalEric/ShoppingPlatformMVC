@@ -40,9 +40,10 @@ public class ProductsController : Controller
     }
 
     // GET: PRODUCTS/Create
+    [HttpGet]
     public IActionResult Create()
     {
-        return View();
+        return View(new ProductViewModel());
     }
 
     // POST: PRODUCTS/Create
@@ -50,15 +51,45 @@ public class ProductsController : Controller
     // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,Name,Price")] Product product)
+    [RequestSizeLimit(6 * 1024 * 1024)]
+    public async Task<IActionResult> Create(ProductViewModel model)
     {
+
+        byte[]? photoData = null;
+        string? contentType = null;
+        if (model.Photo is not null)
+        {
+            var (data, type, error) = await PhotoFile.ReadAsync(model.Photo);
+            if (error is not null || data is null || type is null)
+            {
+                ModelState.AddModelError(nameof(model.Photo), error ?? "The photo could not be read.");
+            }
+            else
+            {
+                photoData = data;
+                contentType = type;
+            }
+        }
+
+
         if (ModelState.IsValid)
         {
-            _db.Add(product);
+            var product = new Product
+            {
+                Name = model.Name,
+                Price = model.Price,
+                Stock = model.Stock
+            };
+            if (photoData is not null && contentType is not null)
+            {
+                product.ProductPhoto = new ProductPhoto { ContentType = contentType, Data = photoData };
+            }
+            _db.Products.Add(product);
+
             await _db.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
-        return View(product);
+        return View(model);
     }
 
     // GET: PRODUCTS/Edit/5
@@ -74,7 +105,7 @@ public class ProductsController : Controller
         {
             return NotFound();
         }
-        return View(new EditProductViewModel
+        return View(new ProductViewModel
         {
             Id = product.Id,
             Name = product.Name,
@@ -87,7 +118,7 @@ public class ProductsController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(6 * 1024 * 1024)]
-    public async Task<IActionResult> Edit(int? id, EditProductViewModel model)
+    public async Task<IActionResult> Edit(int? id, ProductViewModel model)
     {
         if (id != model.Id)
         {
