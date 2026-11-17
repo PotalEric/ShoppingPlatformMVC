@@ -21,24 +21,6 @@ public class ProductsController : Controller
         return View(await _db.Products.ToListAsync());
     }
 
-    // GET: PRODUCTS/Details/5
-    public async Task<IActionResult> Details(int? id)
-    {
-        if (id == null)
-        {
-            return NotFound();
-        }
-
-        var product = await _db.Products
-            .FirstOrDefaultAsync(m => m.Id == id);
-        if (product == null)
-        {
-            return NotFound();
-        }
-
-        return View(product);
-    }
-
     // GET: PRODUCTS/Create
     [HttpGet]
     public IActionResult Create()
@@ -47,8 +29,6 @@ public class ProductsController : Controller
     }
 
     // POST: PRODUCTS/Create
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(6 * 1024 * 1024)]
@@ -92,7 +72,7 @@ public class ProductsController : Controller
         return View(model);
     }
 
-    // GET: PRODUCTS/Edit/5
+    // GET: PRODUCTS/Edit/
     public async Task<IActionResult> Edit(int? id)
     {
         if (id == null)
@@ -198,7 +178,7 @@ public class ProductsController : Controller
         return File(photo.Data, photo.ContentType);
     }
 
-    // GET: PRODUCTS/Delete/5
+    // GET: PRODUCTS/Delete/
     public async Task<IActionResult> Delete(int? id)
     {
         if (id == null)
@@ -213,20 +193,21 @@ public class ProductsController : Controller
             return NotFound();
         }
 
-        return View(product);
+        return View("ConfirmDelete", product);
     }
 
-    // POST: PRODUCTS/Delete/5
+    // POST: PRODUCTS/Delete/
     [HttpPost, ActionName("Delete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int? id)
     {
         var product = await _db.Products.FindAsync(id);
-        if (product != null)
+        if (product is null)
         {
-            _db.Products.Remove(product);
+            return NotFound();
         }
 
+        _db.Products.Remove(product);
         await _db.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
     }
