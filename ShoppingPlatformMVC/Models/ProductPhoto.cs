@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ShoppingPlatformMVC;
 
-public partial class ProductPhoto
+public class ProductPhoto
 {
     public int ProductId { get; set; }
 

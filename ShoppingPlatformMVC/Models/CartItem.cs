@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ShoppingPlatformMVC;
 
-public partial class CartItem
+public class CartItem
 {
     public Guid CartId { get; set; }
 
